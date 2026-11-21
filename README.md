@@ -2,8 +2,8 @@
 
 Mapa 3D de navegación para el navegador del coche (Tesla) y el móvil. Es una web que se instala como aplicación (PWA).
 
-- Aplicación: https://autoboard-nav.github.io/tesladriver3d/
-- Modo autopista 3D: https://autoboard-nav.github.io/tesladriver3d/autopista.html
+- Aplicación: https://autoboard-nav.github.io/tesladriver3D/
+- Modo autopista 3D: https://autoboard-nav.github.io/tesladriver3D/autopista.html
 
 ## Primer uso
 La aplicación no trae claves. Al abrirla por primera vez pide las tuyas (gratuitas) y las guarda **solo en tu navegador**:
