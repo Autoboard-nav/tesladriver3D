@@ -532,6 +532,7 @@ body.noche #radEd .chip{background:#2d353d;border-color:#3a434c;color:#e8edf2} b
   <button class="ajuste" id="btnVerRadares">📍 Ver radares en el mapa: OFF</button>
   <div id="radEdInfo" style="font-size:11px;opacity:.8;padding:2px 14px"></div>
   <button class="ajuste" id="btnRadReset">↩️ Restablecer radares editados</button>
+  <div style="font-size:11px;color:#8d99a5;padding:2px 6px 8px;line-height:1.4">Radares: DGT, Servei Català de Trànsit, Gobierno Vasco, Navarra, Madrid, Salamanca, Donostia y © OpenStreetMap contributors (ODbL 1.0), vía <a href="https://github.com/GeiserX/radares-anunciados-ha" target="_blank" rel="noopener" style="color:#6db3f2">Radares Anunciados</a>.</div>
   <button class="ajuste on" id="btnTramos">📏 Radares de tramo (media): ON</button>
   <button class="ajuste on" id="btnSugerido">🕘 Destino sugerido: ON</button>
   <button class="ajuste on" id="btnFotosCarriles">🖼️ Fotos de carriles bajo los carteles: ON</button>
@@ -577,7 +578,7 @@ body.noche #radEd .chip{background:#2d353d;border-color:#3a434c;color:#e8edf2} b
   <button class="ajuste" id="btnFluidez" style="background:#27384a">📊 Medir fluidez al conducir (60 s)</button>
   <div id="fluDiag" style="font-size:11px;opacity:.9;padding:2px 14px;white-space:pre-wrap"></div>
   <button class="ajuste on" id="btnWake">💡 Pantalla siempre encendida: ON</button>
-  <div class="seccion">Versión v248 · claves propias</div>
+  <div class="seccion">Versión v250 · radares sin límite fiable</div>
   <div class="info" style="font-size:10px;opacity:.6;padding:2px 14px 8px">Modelo 3D Tesla Supercharger: «Tesla Charging Station» de Sketcher (Sketchfab), licencia CC BY 4.0.</div>
 </div>
 
@@ -1521,6 +1522,8 @@ function radarEnRuta(lat,lon,sCoche){
   }
   return mejorD<Infinity ? {d:mejorD, s:mejorS} : null;
 }
+/* Un límite de radar solo vale entre 10 y 130 km/h; fuera de eso (p. ej. 480, 811, vacío) es un dato mal cargado: se avisa del radar SIN número ni aviso de exceso. */
+function limRadarValido(v){ v=Number(v); return (Number.isFinite(v)&&v>=10&&v<=130)?v:0; }
 function comprobarRadaresCercanos(lat,lon,velocidadActualKmh){
   if(!avisosRadaresOn){apagarAlertaRadar();return;}
   if((!gpsOn && !simulando) || !radaresCargados.length){apagarAlertaRadar();return;}
@@ -1555,10 +1558,10 @@ function comprobarRadaresCercanos(lat,lon,velocidadActualKmh){
   const g9=document.getElementById('g9');
   if(!masCercano||distMin>RADAR_DIST_APAGADO){apagarAlertaRadar();g9.textContent='-';return;}
   __radAct=masCercano;
-  const limRadar=Number(masCercano.max)||50;
-  g9.textContent=Math.round(distMin)+' m · '+limRadar+' km/h';
+  const limRadar=limRadarValido(masCercano.max);
+  g9.textContent=Math.round(distMin)+' m · '+(limRadar?limRadar+' km/h':'sin límite');
   if(distMin<RADAR_DIST_AVISO){
-    const porEncima = velocidadActualKmh > limRadar;
+    const porEncima = limRadar>0 && velocidadActualKmh > limRadar;
     const mismo=__radUlt&&__radUlt.rd===masCercano&&Date.now()-__radUlt.t<RADAR_REPITE_MS;
     activarAlertaRadar(distMin, limRadar, porEncima, mismo);
     __radUlt={rd:masCercano,t:Date.now()};
@@ -1569,7 +1572,7 @@ function comprobarRadaresCercanos(lat,lon,velocidadActualKmh){
 function activarAlertaRadar(distancia, limite, porEncima, yaAvisado){
   if(window.__voz){ try{ __voz.radar(distancia,limite,porEncima,alertaRadarActiva||!!yaAvisado); }catch(e){} }
   document.getElementById('radarInfo').classList.add('on');
-  document.getElementById('senalRadar').textContent=limite;
+  document.getElementById('senalRadar').textContent=limite>0?limite:'?';
   document.getElementById('radarDist').textContent=Math.round(distancia)+' m';
   const halo=document.getElementById('radarAlerta');
   if(porEncima){ halo.classList.add('on'); } else { halo.classList.remove('on'); }
@@ -7399,7 +7402,7 @@ window.__tramos=(function(){
   try{ const c=JSON.parse(rd('tramos_cache_v1','null')); if(c&&Array.isArray(c.lista)){ lista=c.lista; centro=c.centro; } }catch(e){}
   const card=()=>document.getElementById('tramoCard');
   const dm=(a,b)=>distM(a.lat,a.lon,b.lat,b.lon);
-  function limiteDe(t){ if(t.lim>0) return t.lim; const rs=(typeof radaresCargados!=='undefined'&&radaresCargados)||[]; let best=null,bd=700; for(const r of rs){ if(r.t!=='tramo'&&!String(r.t).includes('tramo')) continue; const d=Math.min(dm({lat:r.lat,lon:r.lon},t.from),dm({lat:r.lat,lon:r.lon},t.to)); if(d<bd){ bd=d; best=Number(r.max)||null; } } return best; }
+  function limiteDe(t){ if(t.lim>0) return t.lim; const rs=(typeof radaresCargados!=='undefined'&&radaresCargados)||[]; let best=null,bd=700; for(const r of rs){ if(r.t!=='tramo'&&!String(r.t).includes('tramo')) continue; const d=Math.min(dm({lat:r.lat,lon:r.lon},t.from),dm({lat:r.lat,lon:r.lon},t.to)); if(d<bd){ bd=d; best=(Number(r.max)>=10&&Number(r.max)<=130)?Number(r.max):null; } } return best; }
   function marcas(){
     if(typeof map==='undefined'||!map||!map.getSource) return;
     const fc={type:'FeatureCollection',features:[]}; for(const t of lista){ fc.features.push({type:'Feature',geometry:{type:'Point',coordinates:[t.from.lon,t.from.lat]},properties:{k:'i'}},{type:'Feature',geometry:{type:'Point',coordinates:[t.to.lon,t.to.lat]},properties:{k:'f'}}); }
@@ -7634,7 +7637,7 @@ window.__CLIPS_VOZ.radar='SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYwLjE2LjEwMAAAAAAAAA
   function radar(d,lim,porEncima,yaActiva){
     if(!on) return;
     const ahora=Date.now();
-    if(!yaActiva){ pitidoRadar(); const kl=Math.round(lim/10)*10; const esp=[0,1750,1000,1000,900][rmodo]||0; const hablar=()=>decir('Radar a '+distTxt(d)+'. Límite '+lim,true,['rad'+Math.max(50,Math.min(500,Math.round(d/50)*50))].concat(window.__CLIPS_VOZ&&window.__CLIPS_VOZ['lim'+kl]?['lim'+kl]:[])); if(esp) setTimeout(hablar,esp); else hablar(); ultRadarEnc=ahora; }
+    if(!yaActiva){ pitidoRadar(); const kl=lim>0?Math.round(lim/10)*10:0; const esp=[0,1750,1000,1000,900][rmodo]||0; const hablar=()=>decir('Radar a '+distTxt(d)+(lim>0?'. Límite '+lim:''),true,['rad'+Math.max(50,Math.min(500,Math.round(d/50)*50))].concat(window.__CLIPS_VOZ&&window.__CLIPS_VOZ['lim'+kl]?['lim'+kl]:[])); if(esp) setTimeout(hablar,esp); else hablar(); ultRadarEnc=ahora; }
     else if(porEncima && ahora-ultRadarEnc>20000){ ultRadarEnc=ahora; pitidoRadar(); const e2=[0,1750,1000,1000,900][rmodo]||0; if(e2) setTimeout(()=>decir('Reduzca la velocidad',true,['reduzca']),e2); else decir('Reduzca la velocidad',true,['reduzca']); }
   }
   function nuevaRuta(tipo){ hechos=Object.create(null); if(modo<2) return; decir(tipo==='recalculo'?'Ruta recalculada':'Ruta iniciada',true,[tipo==='recalculo'?'recalc':'iniciada']); }
