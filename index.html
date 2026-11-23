@@ -586,7 +586,7 @@ body.noche #radEd .chip{background:#2d353d;border-color:#3a434c;color:#e8edf2} b
   <button class="ajuste" id="btnFluidez" style="background:#27384a">📊 Medir fluidez al conducir (60 s)</button>
   <div id="fluDiag" style="font-size:11px;opacity:.9;padding:2px 14px;white-space:pre-wrap"></div>
   <button class="ajuste on" id="btnWake">💡 Pantalla siempre encendida: ON</button>
-  <div class="seccion">Versión v259 · AUTOPISTA (app única)</div>
+  <div class="seccion">Versión v260 · AUTOPISTA (app única, 3D apagado por defecto)</div>
   <div class="info" style="font-size:10px;opacity:.6;padding:2px 14px 8px">Modelo 3D Tesla Supercharger: «Tesla Charging Station» de Sketcher (Sketchfab), licencia CC BY 4.0.</div>
 </div>
 
@@ -8057,7 +8057,8 @@ const KILL = typeof location!=='undefined' && /[?&]ap=0\b/.test(location.search)
 const CFG = { LANE:4.6, ATRAS:100, ADELANTE:900, PASO:2, REBUILD_M:35, ANTICIPO:250, SALIDA:30, N_DEF:2, N_VUELTA:2, MEDIANA:4.6, MINZOOM:13.5, GAP_OCULTAR:1200 };
 const G = (typeof window!=='undefined') ? window : globalThis;
 let PRE = true; try{ PRE = localStorage.getItem('apPrecarga')!=='0'; }catch(e){}
-let ON = true; try{ ON = localStorage.getItem('apModo')!=='0'; }catch(e){}
+/* por defecto LIGERO (apagado): el 3D de autopista solo se usa si se activa en Ajustes → Modo autopista */
+let ON = false; try{ ON = localStorage.getItem('apModo')==='1'; }catch(e){}
 const ZOOM_AP = [0, 0.6, 1.2, 1.8, 2.4, 3.0, 3.6, 4.2], ZOOM_AP_TXT = ['normal','+','++','+++','++++','+++++','++++++','+++++++']; let ZI = 6; try{ const z=parseInt(localStorage.getItem('apZoom')); if(z>=0&&z<=7) ZI=z; }catch(e){}
 
 /* ---------- 1. detectar tramos de autopista en la ruta ---------- */
@@ -8499,7 +8500,7 @@ function integrar(){
   if(bz){ const pz=()=>{ bz.textContent='🔍 Zoom en autopista: '+ZOOM_AP_TXT[ZI]; st.zoomExtra=ZOOM_AP[ZI]; }; pz();
     bz.onclick=()=>{ ZI=(ZI+1)%8; try{ localStorage.setItem('apZoom',String(ZI)); }catch(e){} pz(); }; }
   if(b){
-    const pinta = ()=>{ b.textContent = '🛣️ Modo autopista: '+(ON?'ACTIVADO':'DESACTIVADO'); };
+    const pinta = ()=>{ b.textContent = '🛣️ Modo autopista 3D: '+(ON?'ACTIVADO':'DESACTIVADO (ligero)'); };
     pinta();
     b.onclick = ()=>{ ON=!ON; try{ localStorage.setItem('apModo',ON?'1':'0'); }catch(e){} pinta(); tick(); };
     if(d) setInterval(()=>{
