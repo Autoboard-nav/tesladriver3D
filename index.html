@@ -578,7 +578,7 @@ body.noche #radEd .chip{background:#2d353d;border-color:#3a434c;color:#e8edf2} b
   <button class="ajuste" id="btnFluidez" style="background:#27384a">📊 Medir fluidez al conducir (60 s)</button>
   <div id="fluDiag" style="font-size:11px;opacity:.9;padding:2px 14px;white-space:pre-wrap"></div>
   <button class="ajuste on" id="btnWake">💡 Pantalla siempre encendida: ON</button>
-  <div class="seccion">Versión v250 · radares sin límite fiable</div>
+  <div class="seccion">Versión v251 · claves entre dispositivos</div>
   <div class="info" style="font-size:10px;opacity:.6;padding:2px 14px 8px">Modelo 3D Tesla Supercharger: «Tesla Charging Station» de Sketcher (Sketchfab), licencia CC BY 4.0.</div>
 </div>
 
@@ -670,6 +670,44 @@ function claveUsuario(n){ try{ return (localStorage.getItem('clave_'+n)||'').tri
 const MAPTILER_KEY=claveUsuario('maptiler')||__CLAVES_DEF.maptiler;
 const OCM_API_KEY=claveUsuario('ocm')||__CLAVES_DEF.ocm;
 const TT=claveUsuario('tomtom')||__CLAVES_DEF.tomtom;
+const __CL={
+  b64:u=>btoa(String.fromCharCode.apply(null,Array.from(u))),
+  ub64:s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0)),
+  norm:c=>String(c||'').toLowerCase().replace(/[^a-z0-9]/g,''),
+  valido:c=>String(c||'').replace(/[^a-zA-Z0-9]/g,'').length>=10,
+  dev(){ try{ let d=localStorage.getItem('d3d.linkdev'); if(!d){ d=Math.random().toString(36).slice(2,10); localStorage.setItem('d3d.linkdev',d); } return d; }catch(e){ return 'x'; } },
+  async tema(c){ const h=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('d3dkeys|'+__CL.norm(c))); return 'd3dkeys-'+Array.from(new Uint8Array(h)).map(b=>b.toString(16).padStart(2,'0')).join('').slice(0,40); },
+  async clave(c,salt){ const base=await crypto.subtle.importKey('raw',new TextEncoder().encode(__CL.norm(c)),'PBKDF2',false,['deriveKey']); return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:200000,hash:'SHA-256'},base,{name:'AES-GCM',length:256},false,['encrypt','decrypt']); },
+  async enviar(c){
+    const v={}; ['maptiler','tomtom','ocm'].forEach(k=>{ const x=claveUsuario(k)||__CLAVES_DEF[k]; if(x) v[k]=x; });
+    if(!v.maptiler||!v.tomtom) throw new Error('Este dispositivo no tiene claves de MapTiler y TomTom que enviar.');
+    const salt=crypto.getRandomValues(new Uint8Array(16)), iv=crypto.getRandomValues(new Uint8Array(12)), k=await __CL.clave(c,salt);
+    const ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},k,new TextEncoder().encode(JSON.stringify(v))));
+    const r=await fetch('https://ntfy.sh/'+await __CL.tema(c),{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({v:1,d:__CL.dev(),s:__CL.b64(salt),i:__CL.b64(iv),c:__CL.b64(ct)})});
+    if(!r.ok) throw new Error('ntfy HTTP '+r.status);
+  },
+  /* escucha el tema cifrado hasta recibir unas claves de OTRO dispositivo (de los últimos 10 min) o agotar el tiempo */
+  esperar(c,ms){
+    return new Promise(async(res,rej)=>{
+      let es=null, fin=false, descifrado=false;
+      const cerrar=()=>{ fin=true; try{ es&&es.close(); }catch(e){} clearTimeout(t); };
+      const t=setTimeout(()=>{ if(fin) return; cerrar(); rej(new Error(descifrado?'Tiempo agotado.':'No llegó nada. ¿Mismo código en los dos? ¿Enviadas hace menos de 10 min?')); },ms);
+      try{ es=new EventSource('https://ntfy.sh/'+await __CL.tema(c)+'/sse?since=10m'); }catch(e){ cerrar(); rej(new Error('Sin conexión')); return; }
+      es.onmessage=async ev=>{
+        if(fin) return;
+        try{
+          const m=JSON.parse(ev.data); if(m.event!=='message') return;
+          const j=JSON.parse(m.message); if(j.d===__CL.dev()) return;
+          const k=await __CL.clave(c,__CL.ub64(j.s));
+          const txt=new TextDecoder().decode(await crypto.subtle.decrypt({name:'AES-GCM',iv:__CL.ub64(j.i)},k,__CL.ub64(j.c)));
+          const v=JSON.parse(txt), ok={}; ['maptiler','tomtom','ocm'].forEach(n=>{ if(typeof v[n]==='string'&&/^[A-Za-z0-9_\-]{12,}$/.test(v[n])) ok[n]=v[n]; });
+          if(!ok.maptiler||!ok.tomtom) return;
+          cerrar(); res(ok);
+        }catch(e){ descifrado=false; }
+      };
+    });
+  }
+};
 function mostrarClaves(oblig){
   const old=document.getElementById('clavesPanel'); if(old) old.remove();
   const campo=(id,tit,url,txt,oblig2)=>{ const usa=claveUsuario(id)?'usando la tuya':(__CLAVES_DEF[id]?'usando la de fábrica':'sin clave');
@@ -684,6 +722,10 @@ function mostrarClaves(oblig){
     +campo('maptiler','MapTiler (mapa)','https://cloud.maptiler.com/account/keys/','Conseguir clave de MapTiler',true)
     +campo('tomtom','TomTom (rutas, tráfico, búsqueda)','https://my.tomtom.com/keys','Conseguir clave de TomTom',true)
     +campo('ocm','OpenChargeMap (cargadores)','https://openchargemap.org/develop','Conseguir clave de OpenChargeMap',false)
+    +'<div style="margin-top:14px;padding-top:10px;border-top:1px solid #3a434c;font:700 14px system-ui,sans-serif">🔗 Pasar las claves a otro dispositivo</div>'
+    +'<div style="font-size:12px;color:#aeb8c2;line-height:1.4;margin:3px 0 6px">Escribe el mismo código de enlace (10 letras o números como mínimo) en los dos aparatos. En uno pulsa Enviar y en el otro Recibir.</div>'
+    +'<input id="cl_cod" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="código de enlace" style="width:100%;box-sizing:border-box;padding:11px 12px;border-radius:10px;border:2px solid #3a434c;background:#2d353d;color:#e8edf2;font:15px system-ui,sans-serif">'
+    +'<div style="display:flex;gap:8px;margin-top:8px"><button id="clEnv" style="flex:1;padding:11px;border-radius:12px;border:1px solid #3a434c;background:#2d353d;color:#e8edf2;font:700 14px system-ui,sans-serif">📤 Enviar mis claves</button><button id="clRec" style="flex:1;padding:11px;border-radius:12px;border:1px solid #3a434c;background:#2d353d;color:#e8edf2;font:700 14px system-ui,sans-serif">📥 Recibir claves</button></div>'
     +'<div id="clMsg" style="color:#ffb4b4;font-size:13px;min-height:18px;margin-top:8px"></div>'
     +'<div style="display:flex;gap:8px;margin-top:6px"><button id="clGuardar" style="flex:2;padding:13px;border-radius:12px;border:0;background:#1e88e5;color:#fff;font:800 15px system-ui,sans-serif">Guardar y recargar</button>'
     +(oblig?'':'<button id="clCerrar" style="flex:1;padding:13px;border-radius:12px;border:1px solid #3a434c;background:#2d353d;color:#d5dce3;font:800 15px system-ui,sans-serif">Cerrar</button>')+'</div>'
@@ -697,6 +739,23 @@ function mostrarClaves(oblig){
     location.reload();
   };
   d.querySelector('#clBorrar').onclick=()=>{ if(!confirm('¿Quitar las claves guardadas en este navegador?')) return; try{ ['maptiler','tomtom','ocm'].forEach(k=>localStorage.removeItem('clave_'+k)); }catch(e){} location.reload(); };
+  const cod=d.querySelector('#cl_cod'); try{ cod.value=localStorage.getItem('d3d.linkcode')||''; }catch(e){}
+  const ms=(t,bien)=>{ const m=d.querySelector('#clMsg'); m.style.color=bien?'#9be39b':'#ffb4b4'; m.textContent=t; };
+  d.querySelector('#clEnv').onclick=async()=>{
+    if(!__CL.valido(cod.value)){ ms('El código necesita 10 letras o números como mínimo.'); return; }
+    ms('Enviando…',true);
+    try{ await __CL.enviar(cod.value); ms('Enviadas (cifradas). En el otro dispositivo pulsa 📥 Recibir claves; vale durante 10 minutos.',true); }catch(e){ ms('No se pudo enviar: '+e.message); }
+  };
+  d.querySelector('#clRec').onclick=async()=>{
+    if(!__CL.valido(cod.value)){ ms('El código necesita 10 letras o números como mínimo.'); return; }
+    ms('Esperando las claves (2 min)… envíalas ahora desde el otro dispositivo.',true);
+    try{
+      const v=await __CL.esperar(cod.value,120000);
+      ['maptiler','tomtom','ocm'].forEach(k=>{ if(v[k]) localStorage.setItem('clave_'+k,v[k]); });
+      try{ if(!localStorage.getItem('d3d.linkcode')) localStorage.setItem('d3d.linkcode',cod.value.trim()); }catch(e){}
+      ms('Recibidas y guardadas. Recargando…',true); setTimeout(()=>location.reload(),700);
+    }catch(e){ ms(e.message); }
+  };
   const c=d.querySelector('#clCerrar'); if(c) c.onclick=()=>d.remove();
 }
 window.mostrarClaves=mostrarClaves;
