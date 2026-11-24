@@ -586,7 +586,7 @@ body.noche #radEd .chip{background:#2d353d;border-color:#3a434c;color:#e8edf2} b
   <button class="ajuste" id="btnFluidez" style="background:#27384a">📊 Medir fluidez al conducir (60 s)</button>
   <div id="fluDiag" style="font-size:11px;opacity:.9;padding:2px 14px;white-space:pre-wrap"></div>
   <button class="ajuste on" id="btnWake">💡 Pantalla siempre encendida: ON</button>
-  <div class="seccion">Versión v261 · AUTOPISTA (app única, 3D apagado por defecto)</div>
+  <div class="seccion">Versión v262 · AUTOPISTA (app única, 3D apagado por defecto)</div>
   <div class="info" style="font-size:10px;opacity:.6;padding:2px 14px 8px">Modelo 3D Tesla Supercharger: «Tesla Charging Station» de Sketcher (Sketchfab), licencia CC BY 4.0.</div>
 </div>
 
@@ -2384,26 +2384,30 @@ function cuadrosDeStep(s,hw,tam,conCarriles){
 /* v250: carteles de carriles y foto: aviso de AVISO_CARR_MS al empezar la maniobra si está lejos, se ocultan, y quedan fijos desde LIM_CARR_M */
 const LIM_CARR_M = 2000, AVISO_CARR_MS = 8000; let __avisoCarr = {k:-1,t0:0};
 const FOTOS_CARRIL_ON = () => { try { return localStorage.getItem('fotos_carril_on') !== '0'; } catch(e) { return true; } };
-const FOTOS_CARRIL = {
-  derecha:{ '2|1':'nv-salida-2c-1-der', '3|2':'nv-salida-3c-1-der', '3|1,2':'nv-salida-3c-2-der', '4|2,3':'salida-2-de-4-derecha-2-flechas' },
-  izquierda:{ '2|0':'nv-salida-2c-1-izq', '3|0':'nv-salida-3c-1-izq', '3|0,1':'nv-salida-3c-2-izq', '4|0,1':'salida-2-de-4-izquierda-2-flechas' },
-  frente:{ '2|1':'nv-frente-2c-1-der', '2|0':'nv-frente-2c-1-izq', '3|2':'nv-frente-3c-1-der', '3|0':'nv-frente-3c-1-izq', '3|1,2':'nv-frente-3c-2-der', '3|0,1':'nv-frente-3c-2-izq',
-    '4|3':'frente-4-carriles-1-derecha', '4|0':'frente-4-carriles-1-izquierda',
+/* Autopista/autovía (s.hw): fotos antiguas (carriles/). Carretera normal: fotos nuevas (carriles/nv-*). Si a autopista le falta un caso, usa la nueva. */
+const FOTOS_CARRIL_AUTO = {
+  derecha:{ '2|1':'salida-1-de-2-derecha', '3|2':'salida-3-carriles-1-derecha', '3|1,2':'salida-2-de-3-derecha', '4|2,3':'salida-2-de-4-derecha-2-flechas' },
+  izquierda:{ '2|0':'salida-1-de-2-izquierda', '3|0':'salida-3-carriles-1-izquierda', '3|0,1':'salida-2-de-3-izquierda', '4|0,1':'salida-2-de-4-izquierda-2-flechas' },
+  frente:{ '2|1':'frente-2-carriles-1-derecha', '2|0':'frente-2-carriles-1-izquierda', '3|2':'frente-3-carriles-1-derecha', '3|0':'frente-3-carriles-1-izquierda', '4|3':'frente-4-carriles-1-derecha', '4|0':'frente-4-carriles-1-izquierda',
     '4|2,3':'ia-azul-derecha-2-carriles', '4|0,1':'ia-azul-izquierda-2-carriles', '5|3,4':'caso05-incorporacion-3-carriles-derecha', '5|0,1':'caso05-incorporacion-3-carriles-izquierda' }
 };
-/* v261: rotondas de autopista (sin espejo): foto según la salida de la rotonda (1, 2, 3) o cambio de sentido; otras salidas, sin foto */
+const FOTOS_CARRIL_CARR = {
+  derecha:{ '2|1':'nv-salida-2c-1-der', '3|2':'nv-salida-3c-1-der', '3|1,2':'nv-salida-3c-2-der' },
+  izquierda:{ '2|0':'nv-salida-2c-1-izq', '3|0':'nv-salida-3c-1-izq', '3|0,1':'nv-salida-3c-2-izq' },
+  frente:{ '2|1':'nv-frente-2c-1-der', '2|0':'nv-frente-2c-1-izq', '3|2':'nv-frente-3c-1-der', '3|0':'nv-frente-3c-1-izq', '3|1,2':'nv-frente-3c-2-der', '3|0,1':'nv-frente-3c-2-izq' }
+};
+/* v261: rotondas (sin espejo; autopista y carretera usan las mismas): salida 1, 2, 3; salida 4 o más y cambio de sentido, la de cambio de sentido */
 const FOTOS_ROTONDA = { 1:'nv-rot-salida-1', 2:'nv-rot-salida-2', 3:'nv-rot-salida-3', U:'nv-rot-cambio-sentido' };
 function fotoCarrilPara(s){
   if(s&&s.maneuver&&(s.maneuver.type==='roundabout'||s.maneuver.type==='rotary')){
-    if(!s.hw) return null;
-    const f=FOTOS_ROTONDA[s.maneuver.modifier==='uturn'?'U':(parseInt(s.maneuver.exit,10)||1)];
-    return f?'carriles/'+f+'.jpg':null;
+    const ex=parseInt(s.maneuver.exit,10)||1;
+    return 'carriles/'+FOTOS_ROTONDA[(s.maneuver.modifier==='uturn'||ex>=4)?'U':ex]+'.jpg';
   }
   if(!s||!s.maneuver||s.maneuver.type!=='turn'||!Array.isArray(s.lanes)) return null;
   const n=s.lanes.length, act=[]; s.lanes.forEach((l,i)=>{ if(l&&l.lane&&l.lane.active) act.push(i); });
   if(n<2||n>5||!act.length||act.length===n) return null;
-  const mod=String(s.maneuver.modifier||'straight'), lado=/right/.test(mod)?'derecha':(/left/.test(mod)?'izquierda':'frente');
-  const f=(FOTOS_CARRIL[lado]||{})[n+'|'+act.join(',')];
+  const mod=String(s.maneuver.modifier||'straight'), lado=/right/.test(mod)?'derecha':(/left/.test(mod)?'izquierda':'frente'), k=n+'|'+act.join(',');
+  const f=s.hw ? (((FOTOS_CARRIL_AUTO[lado]||{})[k])||((FOTOS_CARRIL_CARR[lado]||{})[k])) : (FOTOS_CARRIL_CARR[lado]||{})[k];
   return f?'carriles/'+f+'.jpg':null;
 }
 function actualizarFotoCarril(s){
