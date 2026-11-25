@@ -588,7 +588,7 @@ body.noche #radEd .chip{background:#2d353d;border-color:#3a434c;color:#e8edf2} b
   <button class="ajuste" id="btnFluidez" style="background:#27384a">📊 Medir fluidez al conducir (60 s)</button>
   <div id="fluDiag" style="font-size:11px;opacity:.9;padding:2px 14px;white-space:pre-wrap"></div>
   <button class="ajuste on" id="btnWake">💡 Pantalla siempre encendida: ON</button>
-  <div class="seccion">Versión v263 · AUTOPISTA (app única, 3D apagado por defecto)</div>
+  <div class="seccion">Versión v264 · AUTOPISTA (app única, 3D apagado por defecto)</div>
   <div class="info" style="font-size:10px;opacity:.6;padding:2px 14px 8px">Modelo 3D Tesla Supercharger: «Tesla Charging Station» de Sketcher (Sketchfab), licencia CC BY 4.0.</div>
 </div>
 
@@ -2471,7 +2471,7 @@ async function probarTraficoGV(){
     out.textContent='❌ El navegador no pudo leerlo: '+(e&&e.name==='AbortError'?'tardó más de 15 s':(e&&e.message)||e)+'\n(Si dice «Failed to fetch» suele ser CORS o falta de red.)';
   }
 }
-{ const b=$id('btnTraficoGV'); if(b) b.onclick=probarTraficoGV; }
+{ const b=document.getElementById('btnTraficoGV'); if(b) b.onclick=probarTraficoGV; }
 function nombreStep(s){ return (s.maneuver&&s.maneuver.type==='arrive') ? (s.calle||'Destino') : (s.calle||s.msg||''); }
 function renderStep(){
   const s=steps[stepIdx];
