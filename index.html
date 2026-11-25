@@ -15,10 +15,19 @@
 <link rel="icon" type="image/png" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <title>[AUTOPISTA PRUEBAS] autoboard-next · Fase 11 · v78 codriver</title>
+<script>
+/* v267: tamaño de pantalla (como el zoom del navegador). Por defecto 100 % = igual que siempre. Se cambia en Ajustes → Aspecto del mapa. ?uizoom=100 lo restablece. */
+(function(){ try{
+  var q=(location.search.match(/[?&]uizoom=(\d{2,3})/)||[])[1]; if(q){ localStorage.setItem('ui_zoom',q); }
+  var z=parseInt(localStorage.getItem('ui_zoom'),10); z=(z>=100&&z<=160)?z:100;
+  var d=document.documentElement; d.style.setProperty('--uiz',String(z/100)); if(z!==100) d.style.zoom=String(z/100);
+}catch(e){} })();
+</script>
 <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}</script>
 <style>
 html,body{margin:0;height:100%;background:#0b0e12;overflow:hidden}
+:root{--uiz:1}
 #map{position:absolute;inset:0}
 html.noche0 #map,body.noche #map{background:#1b2128}
 #diag{position:fixed;top:10px;left:10px;z-index:10;background:rgba(10,13,16,.88);border:1px solid #232c33;border-radius:10px;padding:10px 14px;color:#e8eef2;font:12px/1.6 ui-monospace,monospace;max-width:320px;max-height:70vh;overflow-y:auto;display:none}
@@ -261,9 +270,9 @@ body.modo-solomapa #luzCoche{display:none !important}
 #popupCargador .acciones{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
 #popupCargador .acciones button{flex:1;min-width:120px;background:#1d3a2c;border:1px solid #2e6b4a;color:#e8eef2;border-radius:10px;padding:12px 16px;font-size:14px;font-weight:700;cursor:pointer}
 #popupCargador .acciones button.cerrar{flex:0 0 auto;min-width:auto;background:#2a1a1a;border-color:#5a2020;color:#ff8a8a}
-#listaCargadores{position:fixed;top:76px;left:10px;z-index:35;width:220px;max-height:calc(100vh - 100px);background:rgba(10,13,16,.94);border:2px solid #2e6b4a;border-radius:12px;display:none;flex-direction:column;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.6)}
+#listaCargadores{position:fixed;top:76px;left:10px;z-index:35;width:220px;max-height:calc((100vh - 100px)/var(--uiz,1));background:rgba(10,13,16,.94);border:2px solid #2e6b4a;border-radius:12px;display:none;flex-direction:column;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.6)}
 #listaCargadores.on{display:flex}
-#listaCampos{font-family:system-ui,sans-serif;position:fixed;top:76px;left:10px;z-index:35;width:240px;max-height:calc(100vh - 100px);background:rgba(10,13,16,.94);border:2px solid #2e6b4a;border-radius:12px;display:none;flex-direction:column;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.6)}
+#listaCampos{font-family:system-ui,sans-serif;position:fixed;top:76px;left:10px;z-index:35;width:240px;max-height:calc((100vh - 100px)/var(--uiz,1));background:rgba(10,13,16,.94);border:2px solid #2e6b4a;border-radius:12px;display:none;flex-direction:column;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.6)}
 #listaCampos.on{display:flex}
 #listaCampos .cabecera{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:#0f1318;border-bottom:1px solid #232c33;flex:0 0 auto}
 #listaCampos h2{color:#9ae6b4;margin:0;font-size:12px;font-weight:800;letter-spacing:.5px;text-transform:uppercase}
@@ -516,6 +525,7 @@ body.noche #radEd .chip{background:#2d353d;border-color:#3a434c;color:#e8edf2} b
   <button class="ajuste" id="btnAutoAncho">↔️ Ancho de autopista: Ancha</button>
   <button class="ajuste on" id="btnAutoVista">🎥 Vista de autopista detallada: ON</button>
   <div class="seccion">Aspecto del mapa</div>
+  <button class="ajuste" id="btnZoomUI">🔎 Tamaño de pantalla: 100 % (normal)</button>
   <button class="ajuste on" id="btnRelAgua">💧 Agua con orilla suave: ON</button>
   <button class="ajuste on" id="btnRelVerde">🌲 Tonos de verde: ON</button>
   <button class="ajuste on" id="btnRelPuente">🌉 Puentes con sombra: ON</button>
@@ -588,7 +598,7 @@ body.noche #radEd .chip{background:#2d353d;border-color:#3a434c;color:#e8edf2} b
   <button class="ajuste" id="btnFluidez" style="background:#27384a">📊 Medir fluidez al conducir (60 s)</button>
   <div id="fluDiag" style="font-size:11px;opacity:.9;padding:2px 14px;white-space:pre-wrap"></div>
   <button class="ajuste on" id="btnWake">💡 Pantalla siempre encendida: ON</button>
-  <div class="seccion">Versión v266 · AUTOPISTA (app única, 3D apagado por defecto)</div>
+  <div class="seccion">Versión v267 · AUTOPISTA (app única, 3D apagado por defecto)</div>
   <div class="info" style="font-size:10px;opacity:.6;padding:2px 14px 8px">Modelo 3D Tesla Supercharger: «Tesla Charging Station» de Sketcher (Sketchfab), licencia CC BY 4.0.</div>
 </div>
 
@@ -809,6 +819,9 @@ const map=new maplibregl.Map({
   center:[-2.9387,43.2678],zoom:17.2,pitch:60,bearing:0,antialias:antialiasActivo,
   maxTileCacheSize:256,refreshExpiredTiles:false   /* v189: más teselas en memoria → menos huecos de edificios al ir deprisa o girar */
 });
+/* v267: con tamaño de pantalla > 100 % el lienzo se dibuja a más resolución para que no se vea borroso */
+function pixelMapa(){ try{ const z=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--uiz'))||1; map.setPixelRatio((window.devicePixelRatio||1)*z); }catch(e){} }
+pixelMapa();
 document.getElementById('btnAA').textContent=antialiasActivo?'🪄 Antialias: ON (recargar)':'🪄 Antialias: OFF (recargar)';
 let webglOk=true;
 map.on('error',e=>{
@@ -1180,25 +1193,31 @@ let camActual = { center:[-2.9387,43.2678], bearing:0, zoom:ZOOM_CIUDAD, pitch:P
 let camObjetivo = { center:[-2.9387,43.2678], bearing:0, zoom:ZOOM_CIUDAD, pitch:PITCH_NAV_BASE };
 let cochePosActual = [-2.9387, 43.2678]; // [lon, lat] posición del coche mostrada (extrapolada + corrección suavizada)
 
+/* v267: medidas de la pantalla en px de CSS (con el tamaño de pantalla ≠ 100 % son menores que la ventana) */
+function VW(){ return document.documentElement.clientWidth||innerWidth; }
+function VH(){ return document.documentElement.clientHeight||innerHeight; }
+function medidasMapa(){
+  const cont=map.getContainer(), r=(cont&&cont.getBoundingClientRect)?cont.getBoundingClientRect():{};
+  const k=(cont&&cont.offsetWidth&&r.width)?(r.width/cont.offsetWidth):1;
+  return {w:(cont&&cont.clientWidth)||(r.width||innerWidth)/k, h:(cont&&cont.clientHeight)||(r.height||innerHeight)/k, l:(r.left||0)/k, t:(r.top||0)/k};
+}
 /* Padding: coche al 65% de pantalla → padding-top para que el centro lógico caiga ahí.
    Centro del área acolchada = (h + padTop)/2 = 0.65·h  ⇒  padTop = h·(2·0.65 − 1) = 0.30·h.
    Se recalcula con window.innerHeight en cada resize (un único listener). */
 function actualizarPadding(){
   /* medidas del CONTENEDOR del mapa (no de la ventana): la flecha/coche se colocan en px exactamente sobre el punto central del mapa */
-  const cont = map.getContainer(), r = (cont&&cont.getBoundingClientRect) ? cont.getBoundingClientRect() : {};
-  const h = r.height || window.innerHeight, w = r.width || window.innerWidth;
+  const r = medidasMapa(), h = r.h, w = r.w;
   const padTop = Math.round(h * (cocheYact*2 - 1));
   try{ map.setPadding({top: padTop, bottom:0, left:0, right:0}); }catch(e){}
-  const px = (r.left||0) + w/2, py = (r.top||0) + padTop + (h - padTop)/2;
+  const px = (r.l||0) + w/2, py = (r.t||0) + padTop + (h - padTop)/2;
   ['cocheFijo','coche3D','luzCoche'].forEach(id=>{ const el=document.getElementById(id); if(el){ el.style.left=px.toFixed(1)+'px'; el.style.top=py.toFixed(1)+'px'; } });
 }
 /* Mueve el coche en pantalla (y el centro lógico del mapa) a la altura y∈[0.5,0.9]; devuelve el padding-top para pasarlo en el mismo jumpTo */
 function fijarCocheY(y){
   cocheYact=y;
-  const cont=map.getContainer(), r=(cont&&cont.getBoundingClientRect)?cont.getBoundingClientRect():{};
-  const h=r.height||window.innerHeight, w=r.width||window.innerWidth;
+  const r=medidasMapa(), h=r.h, w=r.w;
   const padTop=Math.round(h*(y*2-1));
-  const px=(r.left||0)+w/2, py=(r.top||0)+padTop+(h-padTop)/2;
+  const px=(r.l||0)+w/2, py=(r.t||0)+padTop+(h-padTop)/2;
   ['cocheFijo','coche3D','luzCoche'].forEach(id=>{ const el=document.getElementById(id); if(el){ el.style.left=px.toFixed(1)+'px'; el.style.top=py.toFixed(1)+'px'; } });
   return padTop;
 }
@@ -2476,6 +2495,20 @@ async function probarTraficoGV(){
   }
 }
 { const b=document.getElementById('btnTraficoGV'); if(b) b.onclick=probarTraficoGV; }
+/* v267: tamaño de pantalla (mapa, iconos, velocímetro, letras y ajustes a la vez). 100 % = como siempre. */
+(function(){
+  const OPC=[100,110,120,135,150], b=document.getElementById('btnZoomUI'); if(!b) return;
+  function actual(){ let z=100; try{ z=parseInt(localStorage.getItem('ui_zoom'),10); }catch(e){} return OPC.indexOf(z)>=0?z:(z>=100&&z<=160?z:100); }
+  function pintar(){ const z=actual(); b.textContent='🔎 Tamaño de pantalla: '+z+' %'+(z===100?' (normal)':''); b.classList.toggle('on',z!==100); }
+  function aplicar(z){
+    try{ localStorage.setItem('ui_zoom',String(z)); }catch(e){}
+    const d=document.documentElement; d.style.setProperty('--uiz',String(z/100)); d.style.zoom=(z===100)?'':String(z/100);
+    pintar(); pixelMapa();
+    setTimeout(()=>{ try{ map.resize(); }catch(e){} try{ actualizarPadding(); }catch(e){} try{ window.dispatchEvent(new Event('resize')); }catch(e){} },60);
+  }
+  b.onclick=function(){ const z=actual(), i=OPC.indexOf(z); aplicar(OPC[(i+1)%OPC.length]); };
+  pintar();
+})();
 function nombreStep(s){ return (s.maneuver&&s.maneuver.type==='arrive') ? (s.calle||'Destino') : (s.calle||s.msg||''); }
 function renderStep(){
   const s=steps[stepIdx];
@@ -5901,7 +5934,7 @@ window.__cielo=(function(){
   const lluvia=(function(){
     let cv=null, cx=null, ps=[], raf=0, ult=0, modo='';
     function crear(){ cv=document.createElement('canvas'); cv.id='climaCanvas'; cv.style.cssText='position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:3;'; document.body.appendChild(cv); cx=cv.getContext('2d'); ajustar(); window.addEventListener('resize',ajustar); }
-    function ajustar(){ if(!cv) return; cv.width=Math.max(1,Math.round(innerWidth/2)); cv.height=Math.max(1,Math.round(innerHeight/2)); }
+    function ajustar(){ if(!cv) return; cv.width=Math.max(1,Math.round(VW()/2)); cv.height=Math.max(1,Math.round(VH()/2)); }
     function sync(){
       const w=tiempoEfectivo(), inten=Math.max(w.lluvia,w.nieve), m=w.nieve>w.lluvia?'nieve':'lluvia';
       if(inten<0.05){ parar(); return; }
@@ -5958,7 +5991,7 @@ window.__cielo=(function(){
       const cover=Math.max(w.nubes,w.lluvia,w.nieve), gris=cover>0.6, limpio=cover<0.5&&w.niebla<0.4;
       const top=noche?'#0c1118':(atar?(f.tarde?'#4f6a96':'#7f92b6'):(limpio?'#8fbbe6':P.sky));
       const mid=(limpio&&!noche&&!atar)?'#bcd8ef':P.sky;
-      const k=[noche,atar,f.tarde,limpio,gris,Math.round(cover*5),Math.round(w.niebla*3),P.sky,P.hor,innerWidth,Math.round(hz/30)].join('|');
+      const k=[noche,atar,f.tarde,limpio,gris,Math.round(cover*5),Math.round(w.niebla*3),P.sky,P.hor,VW(),Math.round(hz/30)].join('|');
       const suelo=colorSuelo(P.fog), pct=Math.round(hz/(hz+60)*100);
       sueloAct=suelo;
       g.style.background='linear-gradient(to bottom,'+top+' 0%,'+mid+' 42%,'+P.hor+' '+Math.max(10,pct-14)+'%,'+suelo+' '+pct+'%,'+suelo+' 100%)';
@@ -5966,7 +5999,7 @@ window.__cielo=(function(){
       if(w.niebla>0.6) return;                                            /* niebla espesa: sin nubes, solo bruma */
       const claro=noche?'#46556a':(atar?(f.tarde?'#fbd9c0':'#fbd0c8'):'#ffffff'), sombra=noche?'#1d2631':(atar?(f.tarde?'#c98f86':'#c9a0a8'):'#cfd8e1');
       const col=gris?(noche?'#2c3541':'#c3cad1'):claro, som=gris?(noche?'#171c23':'#9aa3ac'):sombra;
-      const N=Math.min(14,(noche?6:8)+Math.round(cover*6)), W=innerWidth;
+      const N=Math.min(14,(noche?6:8)+Math.round(cover*6)), W=VW();
       for(let i=0;i<N;i++){
         const t=(i*0.6180339)%1, y=hz*(0.08+0.8*((i*0.37)%1)), esc=0.35+0.9*(y/hz), ww=Math.round((220+120*((i*0.73)%1))*esc), hh=Math.round(ww*0.42);
         const im=document.createElement('img'); im.src=sprite(ww,hh,col,som,1000+i*37,noche);
@@ -6563,7 +6596,7 @@ window.__tunel=(function(){
     if(listo||creando) return; creando=true;
     try{
       T=await import('three');
-      cv=document.createElement('canvas'); cv.id='tunel3D'; cv.style.cssText='position:fixed;inset:0;width:100vw;height:100vh;z-index:13;pointer-events:none;opacity:0;visibility:hidden;transition:opacity .45s'; document.body.appendChild(cv);
+      cv=document.createElement('canvas'); cv.id='tunel3D'; cv.style.cssText='position:fixed;inset:0;width:calc(100vw/var(--uiz,1));height:calc(100vh/var(--uiz,1));z-index:13;pointer-events:none;opacity:0;visibility:hidden;transition:opacity .45s'; document.body.appendChild(cv);
       ren=new T.WebGLRenderer({canvas:cv,antialias:false,alpha:false}); ren.setPixelRatio(1);
       sc=new T.Scene(); sc.background=new T.Color(0x05060a); sc.fog=new T.FogExp2(0x0a0b10,0.016); cam=new T.PerspectiveCamera(58,1,0.1,600);
       const tex=(w,h,fn)=>{ const c=document.createElement('canvas'); c.width=w; c.height=h; const x=c.getContext('2d'); fn(x,w,h); const t=new T.CanvasTexture(c); t.wrapS=t.wrapT=T.RepeatWrapping; t.colorSpace=T.SRGBColorSpace; t.anisotropy=4; return t; };
@@ -6602,9 +6635,9 @@ window.__tunel=(function(){
     }catch(e){ err=String(e&&e.message||e); try{ registrarError('tunel',err); }catch(_){} on=false; }
     creando=false;
   }
-  function posCoche(){ const el=document.getElementById('coche3D')||document.getElementById('cocheFijo'); let x=innerWidth/2,y=innerHeight*0.65; if(el&&el.style.left&&el.style.top){ x=parseFloat(el.style.left)||x; y=parseFloat(el.style.top)||y; } return [x,y+12]; }
-  function redim(){ if(!ren) return; const w=innerWidth,h=innerHeight; ren.setSize(w,h,false); cam.aspect=w/h; cam.updateProjectionMatrix(); ajustarCam(); }
-  function ajustarCam(){ if(!cam) return; const w=innerWidth,h=innerHeight, d=sc._d; cam.clearViewOffset(); cam.position.set(d.LX,3.9,8.2); cam.lookAt(d.LX,1.4,-14); cam.updateMatrixWorld(); cam.updateProjectionMatrix();
+  function posCoche(){ const el=document.getElementById('coche3D')||document.getElementById('cocheFijo'); let x=VW()/2,y=VH()*0.65; if(el&&el.style.left&&el.style.top){ x=parseFloat(el.style.left)||x; y=parseFloat(el.style.top)||y; } return [x,y+12]; }
+  function redim(){ if(!ren) return; const w=VW(),h=VH(); ren.setSize(w,h,false); cam.aspect=w/h; cam.updateProjectionMatrix(); ajustarCam(); }
+  function ajustarCam(){ if(!cam) return; const w=VW(),h=VH(), d=sc._d; cam.clearViewOffset(); cam.position.set(d.LX,3.9,8.2); cam.lookAt(d.LX,1.4,-14); cam.updateMatrixWorld(); cam.updateProjectionMatrix();
     const v=new T.Vector3(d.LX,0.3,0).project(cam), sx=(v.x+1)/2*w, sy=(1-v.y)/2*h, [px,py]=posCoche(); lugarX=px; lugarY=py; cam.setViewOffset(w,h,sx-px,sy-py,w,h); }
   function dibujar(dt){
     const d=sc._d; desp+=vel*dt; bend+=(bendObj-bend)*Math.min(1,dt*1.8); d.U.uBend.value=bend;
@@ -7951,7 +7984,7 @@ body.modo-solomapa #btnParkMapa,body.modo-solomapa #apLista{display:none}
 #btnParkMapa.on,#btnParkMapa.abierto,#btnCarg.abierto{box-shadow:0 0 0 3px #fff,0 0 0 5px #1e9e4a}
 #btnCarg.ap3dv{color:#fff;background:#1e9e4a;border-color:#1e9e4a}
 #popupCargador{max-height:70vh;overflow-y:auto}
-#apLista{position:fixed;top:max(56px,calc(env(safe-area-inset-top) + 48px));right:12px;z-index:27;width:min(390px,calc(100vw - 24px));max-height:64vh;overflow-y:auto;display:none;background:#fff;border-radius:14px;box-shadow:0 6px 20px rgba(60,70,80,.32);font:14px/1.35 system-ui,sans-serif;color:#222}
+#apLista{position:fixed;top:max(56px,calc(env(safe-area-inset-top) + 48px));right:12px;z-index:27;width:min(390px,calc((100vw - 24px)/var(--uiz,1)));max-height:calc(64vh/var(--uiz,1));overflow-y:auto;display:none;background:#fff;border-radius:14px;box-shadow:0 6px 20px rgba(60,70,80,.32);font:14px/1.35 system-ui,sans-serif;color:#222}
 #apLista.on{display:block}
 #apLista .apT{position:sticky;top:0;background:inherit;padding:10px 14px 6px;font-weight:800;font-size:15px;border-bottom:1px solid #eef1f4;z-index:1}
 #apLista .apV{padding:16px;text-align:center;color:#6b7580;font-size:13px}
