@@ -1,6 +1,6 @@
 /* Service worker mínimo: hace la app instalable y la abre aunque no haya red.
    Red primero (siempre carga la última versión de index.html); caché solo como respaldo. Teselas y APIs no se tocan. */
-const V = 'autoboard-v136';
+const V = 'autoboard-v137';
 const BASE = ['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(V).then(c => c.addAll(BASE)).catch(()=>{})); self.skipWaiting(); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k=>k!==V).map(k=>caches.delete(k)))).then(()=>self.clients.claim())); });

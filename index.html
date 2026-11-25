@@ -588,7 +588,7 @@ body.noche #radEd .chip{background:#2d353d;border-color:#3a434c;color:#e8edf2} b
   <button class="ajuste" id="btnFluidez" style="background:#27384a">📊 Medir fluidez al conducir (60 s)</button>
   <div id="fluDiag" style="font-size:11px;opacity:.9;padding:2px 14px;white-space:pre-wrap"></div>
   <button class="ajuste on" id="btnWake">💡 Pantalla siempre encendida: ON</button>
-  <div class="seccion">Versión v264 · AUTOPISTA (app única, 3D apagado por defecto)</div>
+  <div class="seccion">Versión v265 · AUTOPISTA (app única, 3D apagado por defecto)</div>
   <div class="info" style="font-size:10px;opacity:.6;padding:2px 14px 8px">Modelo 3D Tesla Supercharger: «Tesla Charging Station» de Sketcher (Sketchfab), licencia CC BY 4.0.</div>
 </div>
 
@@ -2398,12 +2398,13 @@ const FOTOS_CARRIL_CARR = {
   izquierda:{ '2|0':'nv-salida-2c-1-izq', '3|0':'nv-salida-3c-1-izq', '3|0,1':'nv-salida-3c-2-izq' },
   frente:{ '2|1':'nv-frente-2c-1-der', '2|0':'nv-frente-2c-1-izq', '3|2':'nv-frente-3c-1-der', '3|0':'nv-frente-3c-1-izq', '3|1,2':'nv-frente-3c-2-der', '3|0,1':'nv-frente-3c-2-izq' }
 };
-/* v261: rotondas (sin espejo; autopista y carretera usan las mismas): salida 1, 2, 3; salida 4 o más y cambio de sentido, la de cambio de sentido */
-const FOTOS_ROTONDA = { 1:'nv-rot-salida-1', 2:'nv-rot-salida-2', 3:'nv-rot-salida-3', U:'nv-rot-cambio-sentido' };
+/* v265: rotondas (sin espejo). Autopista/autovía: carril azul (nv-rot-*). Carretera normal: carril blanco con flechas negras (nv-rotc-*).
+   Salida 1, 2, 3; salida 4 o más y cambio de sentido usan la de cambio de sentido */
+const FOTOS_ROTONDA = { 1:'salida-1', 2:'salida-2', 3:'salida-3', U:'cambio-sentido' };
 function fotoCarrilPara(s){
   if(s&&s.maneuver&&(s.maneuver.type==='roundabout'||s.maneuver.type==='rotary')){
     const ex=parseInt(s.maneuver.exit,10)||1;
-    return 'carriles/'+FOTOS_ROTONDA[(s.maneuver.modifier==='uturn'||ex>=4)?'U':ex]+'.jpg';
+    return 'carriles/'+(s.hw?'nv-rot-':'nv-rotc-')+FOTOS_ROTONDA[(s.maneuver.modifier==='uturn'||ex>=4)?'U':ex]+'.jpg';
   }
   if(!s||!s.maneuver||s.maneuver.type!=='turn'||!Array.isArray(s.lanes)) return null;
   const n=s.lanes.length, act=[]; s.lanes.forEach((l,i)=>{ if(l&&l.lane&&l.lane.active) act.push(i); });
