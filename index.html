@@ -598,7 +598,7 @@ body.noche #radEd .chip{background:#2d353d;border-color:#3a434c;color:#e8edf2} b
   <button class="ajuste" id="btnFluidez" style="background:#27384a">📊 Medir fluidez al conducir (60 s)</button>
   <div id="fluDiag" style="font-size:11px;opacity:.9;padding:2px 14px;white-space:pre-wrap"></div>
   <button class="ajuste on" id="btnWake">💡 Pantalla siempre encendida: ON</button>
-  <div class="seccion">Versión v267 · AUTOPISTA (app única, 3D apagado por defecto)</div>
+  <div class="seccion">Versión v268 · AUTOPISTA (app única, 3D apagado por defecto)</div>
   <div class="info" style="font-size:10px;opacity:.6;padding:2px 14px 8px">Modelo 3D Tesla Supercharger: «Tesla Charging Station» de Sketcher (Sketchfab), licencia CC BY 4.0.</div>
 </div>
 
@@ -2464,7 +2464,7 @@ function diagCarriles(s){
   el.textContent=__diagCarr.map(x=>x.t).join('\n');
 }
 /* v263 (PRUEBA): ¿puede el navegador leer el feed DATEX II de Tráfico del Gobierno Vasco (nap.dgt.es, CC BY)? Solo lee y muestra el resultado; no pinta nada ni avisa. */
-const TRAFICO_GV_URL='https://nap.dgt.es/datex2/dt-gv/SituationPublication/all/content.xml';
+const TRAFICO_GV_URL='https://autoboard-nav.haymadre9.workers.dev/?src=gv'; /* Worker de Cloudflare (worker-trafico/) que añade CORS al feed oficial */
 async function probarTraficoGV(){
   const out=$id('traficoGVres'); const t0=Date.now(); out.textContent='Leyendo…';
   try{
@@ -2487,8 +2487,9 @@ async function probarTraficoGV(){
       lista.push({d:dist(ref,[lat,lon])/1000,tipo,via,com:com.trim().slice(0,90),ini:ini.slice(0,16).replace('T',' ')});
     }
     lista.sort((a,b)=>a.d-b.d);
+    const etiq=recs[0]?Array.from(new Set(Array.from(recs[0].getElementsByTagName('*')).map(n=>n.localName))).join(', ').slice(0,400):'';
     const cerca=lista.filter(x=>x.d<=25);
-    out.textContent='✅ Leído en '+(Date.now()-t0)+' ms ('+kb+' KB). '+recs.length+' registros, '+lista.length+' con coordenadas, '+cerca.length+' a menos de 25 km de ti.\n'
+    out.textContent='✅ Leído en '+(Date.now()-t0)+' ms ('+kb+' KB). '+recs.length+' registros, '+lista.length+' con coordenadas, '+cerca.length+' a menos de 25 km de ti.\n'+(etiq?'Campos 1.er registro: '+etiq+'\n':'')
       +lista.slice(0,6).map(x=>'· '+x.d.toFixed(1)+' km · '+x.tipo+(x.via?' · '+x.via:'')+(x.ini?' · desde '+x.ini:'')+(x.com?'\n   '+x.com:'')).join('\n');
   }catch(e){
     out.textContent='❌ El navegador no pudo leerlo: '+(e&&e.name==='AbortError'?'tardó más de 15 s':(e&&e.message)||e)+'\n(Si dice «Failed to fetch» suele ser CORS o falta de red.)';
